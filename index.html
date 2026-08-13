@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <title>Calendario Universitario</title>
+  <meta name="description" content="Calendario académico con notas, tareas y eventos, sincronizado con Google Drive.">
+
+  <!-- Instalable como app (Android/Chrome) -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007aff">
+
+  <!-- iOS: para que se vea como app real al agregarla a la pantalla de inicio -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Calendario">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" href="icon-512.png">
+
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://accounts.google.com; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; frame-src https://accounts.google.com;">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div class="mobile-overlay" id="mobile-overlay"></div>
+  <div class="app">
+    <!-- ====== Titlebar ====== -->
+    <div class="titlebar">
+      <div class="titlebar-left">
+        <button id="btn-mobile-menu" title="Menú">☰</button>
+        <div class="window-controls">
+          <button class="window-btn close" id="btn-close" title="Cerrar"></button>
+          <button class="window-btn min" id="btn-min" title="Minimizar"></button>
+          <button class="window-btn max" id="btn-max" title="Maximizar"></button>
+        </div>
+        <div class="app-title">
+          <span class="app-icon">📅</span>
+          <span>Calendario</span>
+        </div>
+        <div class="global-search">
+          <input type="text" id="global-search" placeholder="Buscar eventos, notas, tareas...">
+          <span class="search-icon">🔍</span>
+        </div>
+      </div>
+      <div class="titlebar-right">
+        <button class="tbtn" id="btn-quick-note" title="Nota rápida (Ctrl+Shift+N)">✏️ Nota rápida</button>
+        <button class="tbtn" id="btn-tasks" title="Tareas (Ctrl+T)">☑️ Tareas</button>
+        <button class="tbtn" id="btn-settings" title="Ajustes">⚙️</button>
+        <div class="time-display" id="time-display"></div>
+      </div>
+    </div>
+
+    <!-- ====== Toolbar ====== -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button class="tbtn primary" id="btn-today">Hoy</button>
+        <div class="nav-group">
+          <button class="tbtn nav" id="btn-prev" title="Anterior">‹</button>
+          <button class="tbtn nav" id="btn-next" title="Siguiente">›</button>
+        </div>
+        <h1 id="current-period">Cargando…</h1>
+      </div>
+      <div class="toolbar-right">
+        <div class="view-switcher">
+          <button class="view-btn active" data-view="month">Mes</button>
+          <button class="view-btn" data-view="week">Semana</button>
+          <button class="view-btn" data-view="day">Día</button>
+          <button class="view-btn" data-view="agenda">Agenda</button>
+          <button class="view-btn" data-view="tasks">Tareas</button>
+        </div>
+        <button class="tbtn primary" id="btn-add-event">+ Evento</button>
+        <button class="tbtn" id="btn-add-task" title="Nueva tarea">+ Tarea</button>
+      </div>
+    </div>
+
+    <!-- ====== Main ====== -->
+    <div class="main">
+      <!-- Sidebar izquierdo -->
+      <aside class="sidebar">
+        <button class="tbtn full-width primary" id="btn-add-event-side">+ Nuevo evento</button>
+
+        <div class="sidebar-section">
+          <div class="mini-cal" id="mini-cal"></div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="section-title">
+            <span>Categorías</span>
+            <button class="section-action" id="btn-manage-cats" title="Gestionar">⚙</button>
+          </div>
+          <div class="categories-list" id="categories-list"></div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="section-title">
+            <span>Próximos eventos</span>
+          </div>
+          <div class="upcoming-events" id="upcoming-events">
+            <div class="empty-mini">Sin eventos próximos</div>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="section-title">Datos</div>
+          <button class="tbtn small full-width" id="btn-open-folder">📁 Abrir carpeta de datos</button>
+          <button class="tbtn small full-width" id="btn-export">⬇ Exportar backup</button>
+          <button class="tbtn small full-width" id="btn-import">⬆ Importar backup</button>
+        </div>
+      </aside>
+
+      <!-- Centro: calendario -->
+      <section class="calendar-area">
+        <div class="calendar-content" id="calendar-content"></div>
+      </section>
+
+      <!-- Panel derecho: notas -->
+      <aside class="notes-panel" id="notes-panel">
+        <div class="notes-header">
+          <div class="notes-title">
+            <span class="notes-icon">📝</span>
+            <div>
+              <div id="notes-date-label">Selecciona un día</div>
+              <div class="notes-sub" id="notes-day-events-count">0 eventos</div>
+            </div>
+          </div>
+          <div class="notes-actions">
+            <button class="icon-btn" id="btn-new-note" title="Nueva nota">+ Nota</button>
+            <button class="icon-btn" id="btn-clear-notes" title="Borrar todo el día">🗑</button>
+            <button class="icon-btn" id="btn-export-note" title="Exportar">⬇</button>
+            <button class="icon-btn" id="btn-toggle-notes" title="Contraer">»</button>
+          </div>
+        </div>
+        <div class="notes-tabs" id="notes-tabs"></div>
+        <div class="notes-toolbar" id="notes-toolbar">
+          <button class="ntb" data-cmd="bold" title="Negrita (Ctrl+B)"><b>B</b></button>
+          <button class="ntb" data-cmd="italic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+          <button class="ntb" data-cmd="underline" title="Subrayado"><u>U</u></button>
+          <button class="ntb" data-cmd="strikeThrough" title="Tachado"><s>S</s></button>
+          <span class="ntb-sep"></span>
+          <button class="ntb" data-cmd="formatBlock" data-val="H2" title="Título">H</button>
+          <button class="ntb" data-cmd="formatBlock" data-val="H3" title="Subtítulo">h</button>
+          <button class="ntb" data-cmd="formatBlock" data-val="P" title="Párrafo">¶</button>
+          <span class="ntb-sep"></span>
+          <button class="ntb" data-cmd="insertUnorderedList" title="Lista">•</button>
+          <button class="ntb" data-cmd="insertOrderedList" title="Lista numerada">1.</button>
+          <button class="ntb" data-cmd="formatBlock" data-val="BLOCKQUOTE" title="Cita">"</button>
+          <span class="ntb-sep"></span>
+          <button class="ntb" data-cmd="justifyLeft" title="Alinear izquierda">⇤</button>
+          <button class="ntb" data-cmd="justifyCenter" title="Centrar">↔</button>
+          <button class="ntb" data-cmd="justifyRight" title="Alinear derecha">⇥</button>
+          <span class="ntb-sep"></span>
+          <input type="color" class="ntb color-pick" id="nt-color" title="Color de texto" value="#000000">
+          <button class="ntb" data-cmd="createLink" title="Enlace">🔗</button>
+          <button class="ntb" data-cmd="removeFormat" title="Quitar formato">✕</button>
+          <button class="ntb" id="btn-attach" title="Adjuntar archivo">📎</button>
+        </div>
+        <div class="notes-content" id="notes-content">
+          <div class="notes-empty" id="notes-empty">
+            <div class="notes-empty-icon">📝</div>
+            <div>Selecciona un día y crea una nota</div>
+            <button class="tbtn primary" id="btn-create-first-note">+ Crear primera nota</button>
+          </div>
+          <div class="note-editor" id="note-editor" style="display:none">
+            <input type="text" class="note-title-input" id="note-title" placeholder="Título de la nota...">
+            <div class="note-rich" id="note-rich" contenteditable="true" placeholder="Escribe aquí..."></div>
+            <div class="note-attachments" id="note-attachments"></div>
+          </div>
+        </div>
+        <div class="notes-footer">
+          <span id="notes-status">Listo</span>
+          <span id="notes-count">0 palabras</span>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ====== Modal: evento ====== -->
+    <div class="modal-overlay" id="event-modal">
+      <div class="modal large">
+        <div class="modal-header">
+          <h2 id="event-modal-title">Nuevo evento</h2>
+          <button class="icon-btn" id="event-modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <input type="text" id="event-title" class="big-input" placeholder="Título del evento">
+          </div>
+          <div class="form-row two-col">
+            <div>
+              <label>Inicio</label>
+              <input type="date" id="event-start-date">
+              <input type="time" id="event-start-time">
+            </div>
+            <div>
+              <label>Fin</label>
+              <input type="date" id="event-end-date">
+              <input type="time" id="event-end-time">
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Categoría</label>
+            <div class="color-picker" id="event-color-picker"></div>
+          </div>
+          <div class="form-row two-col">
+            <div>
+              <label>Lugar</label>
+              <input type="text" id="event-location" placeholder="Aula, dirección...">
+            </div>
+            <div>
+              <label>Prioridad</label>
+              <select id="event-priority">
+                <option value="low">Baja</option>
+                <option value="medium" selected>Media</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Descripción</label>
+            <textarea id="event-description" rows="3" placeholder="Detalles, material, temario..."></textarea>
+          </div>
+          <div class="form-row">
+            <label>Recordatorios</label>
+            <div id="event-reminders" class="reminders-list"></div>
+            <button class="tbtn small" id="btn-add-reminder">+ Añadir recordatorio</button>
+          </div>
+          <div class="form-row checkbox-row">
+            <label><input type="checkbox" id="event-all-day"> Todo el día</label>
+            <label><input type="checkbox" id="event-recurring"> Repetir semanalmente</label>
+          </div>
+          <div class="form-row" id="recurring-options" style="display:none">
+            <label>Repetir cada</label>
+            <select id="event-repeat-weeks">
+              <option value="1">1 semana</option>
+              <option value="2" selected>2 semanas</option>
+              <option value="3">3 semanas</option>
+              <option value="4">4 semanas</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-danger" id="event-delete" style="display:none">Eliminar</button>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary" id="event-cancel">Cancelar</button>
+          <button class="btn btn-primary" id="event-save">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== Modal: tarea ====== -->
+    <div class="modal-overlay" id="task-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="task-modal-title">Nueva tarea</h2>
+          <button class="icon-btn" id="task-modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <input type="text" id="task-title" class="big-input" placeholder="¿Qué hay que hacer?">
+          </div>
+          <div class="form-row two-col">
+            <div>
+              <label>Fecha límite</label>
+              <input type="date" id="task-due-date">
+            </div>
+            <div>
+              <label>Hora</label>
+              <input type="time" id="task-due-time">
+            </div>
+          </div>
+          <div class="form-row two-col">
+            <div>
+              <label>Categoría</label>
+              <div class="color-picker" id="task-color-picker"></div>
+            </div>
+            <div>
+              <label>Prioridad</label>
+              <select id="task-priority">
+                <option value="low">Baja</option>
+                <option value="medium" selected>Media</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Notas</label>
+            <textarea id="task-notes" rows="2" placeholder="Detalles, enlaces..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-danger" id="task-delete" style="display:none">Eliminar</button>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary" id="task-cancel">Cancelar</button>
+          <button class="btn btn-primary" id="task-save">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== Modal: categorías ====== -->
+    <div class="modal-overlay" id="cat-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Gestionar categorías</h2>
+          <button class="icon-btn" id="cat-modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="cat-list-modal"></div>
+          <div class="add-cat-form">
+            <input type="text" id="new-cat-name" placeholder="Nueva categoría">
+            <input type="color" id="new-cat-color" value="#ff3b30">
+            <button class="btn btn-primary" id="add-cat-submit">Añadir</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="spacer"></div>
+          <button class="btn btn-secondary" id="cat-modal-done">Listo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== Modal: ajustes ====== -->
+    <div class="modal-overlay" id="settings-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Ajustes</h2>
+          <button class="icon-btn" id="settings-modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>Semana empieza en</label>
+            <select id="setting-week-start">
+              <option value="1">Lunes</option>
+              <option value="0">Domingo</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Vista por defecto</label>
+            <select id="setting-default-view">
+              <option value="month">Mes</option>
+              <option value="week">Semana</option>
+              <option value="day">Día</option>
+              <option value="agenda">Agenda</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Formato de hora</label>
+            <select id="setting-time-format">
+              <option value="24h">24 horas</option>
+              <option value="12h">12 horas (AM/PM)</option>
+            </select>
+          </div>
+          <div class="form-row checkbox-row">
+            <label><input type="checkbox" id="setting-week-numbers"> Mostrar números de semana</label>
+          </div>
+          <div class="form-row">
+            <label>Datos almacenados en:</label>
+            <code class="data-path" id="data-path-display"></code>
+          </div>
+          <div class="form-row" style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+            <label>☁️ Sincronización con Google Drive</label>
+            <div id="drive-status-line" style="display:flex;align-items:center;gap:10px;margin:8px 0">
+              <span id="drive-status-dot" style="width:10px;height:10px;border-radius:50%;background:#888;flex-shrink:0"></span>
+              <span id="drive-status-text">Comprobando...</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary" id="btn-drive-connect">Conectar Google Drive</button>
+              <button class="btn btn-secondary" id="btn-drive-sync" style="display:none">Sincronizar ahora</button>
+              <button class="btn btn-danger" id="btn-drive-disconnect" style="display:none">Desconectar</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="spacer"></div>
+          <button class="btn btn-primary" id="settings-save">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== Modal: búsqueda global ====== -->
+    <div class="modal-overlay" id="search-modal">
+      <div class="modal search-modal">
+        <div class="search-input-wrap">
+          <input type="text" id="search-input" placeholder="Buscar...">
+        </div>
+        <div class="search-results" id="search-results"></div>
+        <div class="modal-footer">
+          <div class="search-hint">↑↓ navegar · Enter abrir · Esc cerrar</div>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary" id="search-modal-close">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== Modal: nota rápida ====== -->
+    <div class="modal-overlay" id="quicknote-modal">
+      <div class="modal small">
+        <div class="modal-header">
+          <h2>✏️ Nota rápida</h2>
+          <button class="icon-btn" id="quicknote-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="quicknote-title" class="big-input" placeholder="Título (opcional)">
+          <textarea id="quicknote-content" rows="6" placeholder="Escribe rápido..."></textarea>
+          <div class="form-row" style="margin-top:10px">
+            <label>Guardar en fecha</label>
+            <input type="date" id="quicknote-date">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="spacer"></div>
+          <button class="btn btn-secondary" id="quicknote-cancel">Cancelar</button>
+          <button class="btn btn-primary" id="quicknote-save">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== Toast ====== -->
+    <div class="toast" id="toast"></div>
+    <div class="toast-stack" id="toast-stack"></div>
+
+    <!-- Botón flotante (solo mobile): abre el panel de notas del día -->
+    <button id="btn-mobile-notes" title="Notas del día">📝</button>
+  </div>
+
+  <script src="web-api.js"></script>
+  <script src="app.js"></script>
+  <script src="mobile-nav.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(err => console.warn('SW no registrado:', err));
+      });
+    }
+  </script>
+</body>
+</html>

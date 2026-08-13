@@ -1,0 +1,103 @@
+/* ============================================================
+   Ajustes para pantallas chicas (iPhone y similares).
+   No toca el diseño de escritorio: todo vive dentro de @media.
+   ============================================================ */
+
+/* Barra de estado / notch del iPhone: le damos aire arriba */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (max-width: 900px) {
+  html, body { overflow-x: hidden; }
+
+  .app { min-width: 0; }
+
+  /* Los botones de cerrar/minimizar/maximizar son de Electron, en el celu no sirven */
+  .window-controls { display: none !important; }
+
+  .titlebar {
+    padding-top: calc(8px + var(--safe-top));
+    flex-wrap: wrap;
+    height: auto;
+    -webkit-app-region: no-drag;
+  }
+  .titlebar-left { gap: 8px; }
+  .global-search { display: none; } /* se busca con el botón 🔍 de la toolbar */
+  .app-title span:last-child { display: none; } /* ahorramos espacio, dejamos solo el ícono */
+
+  .toolbar {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .toolbar-right { width: 100%; justify-content: space-between; }
+  .view-switcher { overflow-x: auto; max-width: 100%; }
+  #current-period { font-size: 15px; }
+
+  .main { position: relative; overflow: hidden; }
+
+  /* Sidebar y panel de notas se convierten en cajones (drawers) que
+     entran desde los costados, en vez de estar siempre visibles */
+  .sidebar, .notes-panel {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 86vw;
+    max-width: 360px;
+    z-index: 200;
+    background: var(--bg-primary);
+    box-shadow: 0 0 40px rgba(0,0,0,0.4);
+    transition: transform .25s ease;
+    padding-top: calc(16px + var(--safe-top));
+    padding-bottom: var(--safe-bottom);
+    overflow-y: auto;
+  }
+  .sidebar { left: 0; transform: translateX(-105%); }
+  .sidebar.mobile-open { transform: translateX(0); }
+  .notes-panel { right: 0; left: auto; transform: translateX(105%); width: 92vw; max-width: 420px; }
+  .notes-panel.mobile-open { transform: translateX(0); }
+
+  /* Fondo oscuro detrás del cajón abierto */
+  .mobile-overlay {
+    display: none;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 150;
+  }
+  .mobile-overlay.mobile-open { display: block; }
+
+  .calendar-area { width: 100%; }
+
+  /* Botones más grandes = más fáciles de tocar con el dedo */
+  .tbtn, .icon-btn, .view-btn, .ntb { min-height: 38px; }
+
+  /* Botón flotante para abrir notas del día seleccionado */
+  #btn-mobile-notes {
+    position: fixed;
+    right: 16px;
+    bottom: calc(20px + var(--safe-bottom));
+    z-index: 120;
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    font-size: 22px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  }
+
+  #btn-mobile-menu {
+    background: none; border: none; font-size: 20px; color: var(--text-primary);
+    padding: 4px 8px;
+  }
+
+  .modal { padding: 16px; }
+  .modal-content { width: 100%; max-width: 100%; max-height: 90vh; }
+}
+
+/* Standalone (agregada a la pantalla de inicio): sin barra de Safari,
+   así que le sumamos el margen del notch a lo que antes lo daba el navegador */
+@media (display-mode: standalone) {
+  .titlebar { padding-top: calc(10px + var(--safe-top)); }
+}

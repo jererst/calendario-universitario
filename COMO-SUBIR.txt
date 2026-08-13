@@ -1,0 +1,41 @@
+╔════════════════════════════════════════════════════════════════╗
+║   CÓMO SUBIR LA PWA A GITHUB PAGES (jererst/calendario-universitario)   ║
+╚════════════════════════════════════════════════════════════════╝
+
+1) Descomprimí este ZIP en una carpeta cualquiera.
+
+2) Abrí una terminal AHÍ ADENTRO (donde están index.html, app.js, etc.)
+   y corré, uno por uno:
+
+   git clone https://github.com/jererst/calendario-universitario.git repo-temp
+   cp -r ./* repo-temp/
+   cd repo-temp
+   git add .
+   git commit -m "Version web (PWA) del calendario"
+   git push
+
+   (Te va a pedir usuario y contraseña de GitHub — OJO: GitHub ya no
+   acepta tu contraseña normal para esto, pide un "Personal Access
+   Token". Si te lo pide y no tenés uno, avisame y te paso los pasos
+   para generarlo en 1 minuto).
+
+3) Esperá 1-2 minutos y entrá a:
+   https://jererst.github.io/calendario-universitario/
+
+4) Si ves la app cargar pero al tocar "Conectar Google Drive" te tira
+   error de "origen no autorizado" — es porque falta el último paso,
+   que hacemos juntos: agregar esta URL en Google Cloud Console,
+   dentro del cliente OAuth "Calendario PWA" → Orígenes autorizados
+   de JavaScript → Agregar URI → https://jererst.github.io
+   (SIN la barra final, sin el /calendario-universitario/, solo eso).
+
+5) Instalar en tu iPhone:
+   - Abrí esa URL en SAFARI (no en Chrome, en iOS tiene que ser Safari)
+   - Botón de compartir (el cuadradito con la flecha, abajo)
+   - "Agregar a inicio"
+   - Listo, te queda un ícono como cualquier app.
+
+6) La primera vez que abras la app instalada, andá a Ajustes (⚙️)
+   → Conectar Google Drive, elegí tu cuenta, aceptá el permiso.
+   Va a decir que la app "no está verificada" — es normal, es tuya:
+   Avanzado → Ir a Calendario Universitario (no seguro).
